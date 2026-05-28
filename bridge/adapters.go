@@ -34,6 +34,8 @@ func ResolveAgentSkillsDirs(homeDir string, agents []string) []string {
 		case "antigravity":
 			addPath(filepath.Join(homeDir, ".gemini", "config", "skills"))
 			addPath(filepath.Join(homeDir, ".gemini", "skills"))
+			addPath(filepath.Join(homeDir, ".gemini", "antigravity", "skills"))
+			addPath(filepath.Join(homeDir, ".gemini", "antigravity-cli", "skills"))
 		case "codex", "vscode-copilot":
 			addPath(filepath.Join(homeDir, ".codex", "skills"))
 		case "pi":

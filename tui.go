@@ -56,6 +56,21 @@ type tuiModel struct {
 	infoMessage  string
 }
 
+func getChoices(cfg *bridge.Config) []string {
+	syncStatus := "[INACTIVO]"
+	if cfg.SyncToEngram {
+		syncStatus = "[ACTIVO]"
+	}
+	return []string{
+		"Sincronizar skills ahora",
+		"Agregar carpeta origen de skills",
+		"Quitar carpeta origen de skills",
+		fmt.Sprintf("Alternar sync_to_engram %s", syncStatus),
+		"Ver versión",
+		"Salir",
+	}
+}
+
 func initialModel(configPath string, cfg *bridge.Config, activePath string) tuiModel {
 	ti := textinput.New()
 	ti.Placeholder = ". (Dejá vacío para agregar la carpeta actual)"
@@ -64,7 +79,7 @@ func initialModel(configPath string, cfg *bridge.Config, activePath string) tuiM
 	ti.Width = 45
 
 	return tuiModel{
-		choices:      []string{"Sincronizar Skills (sync)", "Agregar carpeta origen (add)", "Quitar carpeta origen (remove)", "Ver versión (version)", "Salir"},
+		choices:      getChoices(cfg),
 		cursor:       0,
 		removeCursor: 0,
 		configPath:   configPath,
@@ -101,7 +116,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor--
 				}
 			case "down", "j":
-				if m.cursor < len(m.choices)-1 {
+				if m.cursor < len(m.choices)-1 { // 6 choices, max index 5
 					m.cursor++
 				}
 			case "enter":
@@ -118,9 +133,22 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = "remove"
 					m.removeCursor = 0
 					m.errMessage = ""
-				case 3: // Version
+				case 3: // Toggle sync_to_engram
+					m.cfg.SyncToEngram = !m.cfg.SyncToEngram
+					if err := saveConfig(m.activePath, m.cfg); err != nil {
+						m.errMessage = fmt.Sprintf("Error al guardar config: %v", err)
+						return m, nil
+					}
+					status := "desactivada"
+					if m.cfg.SyncToEngram {
+						status = "activada"
+					}
+					m.infoMessage = fmt.Sprintf("Sincronización con Engram %s", status)
+					m.choices = getChoices(m.cfg)
+					m.state = "success"
+				case 4: // Version
 					m.state = "version"
-				case 4: // Exit
+				case 5: // Exit
 					m.selected = "exit"
 					return m, tea.Quit
 				}
@@ -234,12 +262,12 @@ func (m tuiModel) View() string {
 	var s strings.Builder
 
 	// Colores ANSI sobrios (tonalidad normal de terminal estándar)
-	borderCol := "\x1b[90m"       // Gris oscuro para contornos (tonalidad normal)
-	textDim := "\x1b[37m"         // Blanco estándar
-	cyanBright := "\x1b[36;1m"     // Cian brillante para logo y selección activa
-	whiteBold := "\x1b[1;37m"     // Blanco negrita para títulos
-	redBright := "\x1b[31;1m"     // Rojo brillante para errores
-	greenBright := "\x1b[32;1m"   // Verde para éxito
+	borderCol := "\x1b[90m"     // Gris oscuro para contornos (tonalidad normal)
+	textDim := "\x1b[37m"       // Blanco estándar
+	cyanBright := "\x1b[36;1m"  // Cian brillante para logo y selección activa
+	whiteBold := "\x1b[1;37m"   // Blanco negrita para títulos
+	redBright := "\x1b[31;1m"   // Rojo brillante para errores
+	greenBright := "\x1b[32;1m" // Verde para éxito
 	reset := "\x1b[0m"
 
 	boxWidth := 74 // Ancho interior exacto de la caja

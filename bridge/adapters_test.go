@@ -31,6 +31,8 @@ func TestResolveAgentSkillsDirs(t *testing.T) {
 			want: []string{
 				filepath.Join(home, ".gemini", "config", "skills"),
 				filepath.Join(home, ".gemini", "skills"),
+				filepath.Join(home, ".gemini", "antigravity", "skills"),
+				filepath.Join(home, ".gemini", "antigravity-cli", "skills"),
 				filepath.Join(home, ".pi", "skills"),
 			},
 		},

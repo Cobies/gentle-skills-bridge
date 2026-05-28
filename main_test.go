@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gentle-skills-bridge/bridge"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestRunVersion(t *testing.T) {
@@ -136,5 +139,70 @@ func TestRunRemove(t *testing.T) {
 
 	if strings.Contains(string(content), filepath.ToSlash(sourceDir)) {
 		t.Fatalf("config still contains removed source: %s", string(content))
+	}
+}
+
+func TestGetChoices(t *testing.T) {
+	cfg := &bridge.Config{SyncToEngram: true}
+	choices := getChoices(cfg)
+	if len(choices) != 6 {
+		t.Fatalf("expected 6 choices, got %d", len(choices))
+	}
+	if !strings.Contains(choices[3], "[ACTIVO]") {
+		t.Fatalf("expected choices[3] to contain [ACTIVO], got %q", choices[3])
+	}
+
+	cfg.SyncToEngram = false
+	choices = getChoices(cfg)
+	if !strings.Contains(choices[3], "[INACTIVO]") {
+		t.Fatalf("expected choices[3] to contain [INACTIVO], got %q", choices[3])
+	}
+}
+
+func TestTuiModelToggleSync(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.json")
+	cfg := &bridge.Config{
+		Sources:      []string{"some-source"},
+		SyncToEngram: true,
+	}
+
+	// Write initial config file so saveConfig works
+	if err := saveConfig(configPath, cfg); err != nil {
+		t.Fatalf("failed to save config: %v", err)
+	}
+
+	m := initialModel(configPath, cfg, configPath)
+	m.cursor = 3 // Index for toggle sync
+
+	// Simulate pressing enter
+	rawModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updatedModel := rawModel.(tuiModel)
+
+	if updatedModel.cfg.SyncToEngram {
+		t.Fatalf("expected SyncToEngram to be toggled to false, got true")
+	}
+
+	if updatedModel.state != "success" {
+		t.Fatalf("expected state to be success, got %q", updatedModel.state)
+	}
+
+	if !strings.Contains(updatedModel.infoMessage, "Sincronización con Engram desactivada") {
+		t.Fatalf("expected infoMessage to notify deactivation, got %q", updatedModel.infoMessage)
+	}
+
+	// Now check if it toggles back to active
+	updatedModel.state = "menu"
+	updatedModel.cursor = 3
+
+	rawModel2, _ := updatedModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	updatedModel2 := rawModel2.(tuiModel)
+
+	if !updatedModel2.cfg.SyncToEngram {
+		t.Fatalf("expected SyncToEngram to be toggled back to true, got false")
+	}
+
+	if !strings.Contains(updatedModel2.infoMessage, "Sincronización con Engram activada") {
+		t.Fatalf("expected infoMessage to notify activation, got %q", updatedModel2.infoMessage)
 	}
 }
