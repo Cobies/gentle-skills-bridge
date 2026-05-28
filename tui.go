@@ -302,8 +302,8 @@ func (m tuiModel) View() string {
 		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
 	}
 
-	// Dibujar borde inferior estilizado: ╚[ ENDEVS CONTROL PLANE ]══════════════════════════════════[ v1.0 - 2026 ]╝
-	s.WriteString(borderCol + "╚[ ENDEVS CONTROL PLANE ]" + strings.Repeat("═", 38) + "[ v1.0 - 2026 ]╝" + reset + "\n")
+	// Dibujar borde inferior estilizado: ╚══════════════════════════════════════════════════════════[ v1.0 - 2026 ]╝
+	s.WriteString(borderCol + "╚" + strings.Repeat("═", 62) + "[ v1.0 - 2026 ]╝" + reset + "\n")
 
 	return s.String()
 }
