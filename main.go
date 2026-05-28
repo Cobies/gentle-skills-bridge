@@ -11,6 +11,7 @@ import (
 
 	"gentle-skills-bridge/bridge"
 	"github.com/fsnotify/fsnotify"
+	"github.com/mattn/go-isatty"
 )
 
 const version = "1.0.0"
@@ -46,6 +47,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 	parsedArgs := fs.Args()
 	if len(parsedArgs) < 1 {
+		// Run interactive TUI menu only if stdout is a real terminal
+		if isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd()) {
+			return runInteractiveMenu(stdout, stderr, *configPath, *dryRun)
+		}
+		// Fallback to classic usage for non-interactive outputs (tests, scripts, CI)
 		fs.Usage()
 		return 1
 	}
