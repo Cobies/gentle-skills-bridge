@@ -58,7 +58,7 @@ type tuiModel struct {
 
 func initialModel(configPath string, cfg *bridge.Config, activePath string) tuiModel {
 	ti := textinput.New()
-	ti.Placeholder = "C:/Ruta/A/Tus/Skills"
+	ti.Placeholder = ". (Dejá vacío para agregar la carpeta actual)"
 	ti.Focus()
 	ti.CharLimit = 250
 	ti.Width = 45
@@ -135,8 +135,7 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tea.KeyEnter:
 				val := strings.TrimSpace(m.textInput.Value())
 				if val == "" {
-					m.errMessage = "La ruta no puede estar vacía."
-					return m, nil
+					val = "." // Default to current directory if empty
 				}
 
 				absPath, err := filepath.Abs(val)
