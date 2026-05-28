@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"gentle-skills-bridge/bridge"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -25,12 +26,14 @@ const asciiCobies = `
 
 var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
 
-// visualLen calcula el largo visual de una cadena ignorando los códigos ANSI de color.
+// visualLen calcula el largo visual de una cadena en columnas de pantalla,
+// eliminando códigos de color ANSI y contando runas Unicode individuales.
 func visualLen(s string) int {
-	return len(ansiRegex.ReplaceAllString(s, ""))
+	cleanStr := ansiRegex.ReplaceAllString(s, "")
+	return utf8.RuneCountInString(cleanStr)
 }
 
-// padLine rellena la cadena con espacios hasta el ancho especificado, considerando su largo visual real.
+// padLine rellena la cadena con espacios hasta el ancho especificado, considerando su largo visual real en runas.
 func padLine(content string, width int) string {
 	visLen := visualLen(content)
 	if visLen >= width {
@@ -195,22 +198,24 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m tuiModel) View() string {
 	var s strings.Builder
 
-	// Colores ANSI estilo Cyberpunk/Terminal retro
-	greenBright := "\x1b[38;5;82m" // Verde brillante fluorescente
-	greenDim := "\x1b[38;5;29m"    // Verde apagado para detalles
-	cyanBright := "\x1b[38;5;51m"  // Cian brillante
-	whiteBold := "\x1b[1;37m"      // Blanco negrita
+	// Colores ANSI sobrios (tonalidad normal de terminal estándar)
+	borderCol := "\x1b[90m"        // Gris oscuro para contornos (tonalidad normal)
+	textDim := "\x1b[37m"          // Blanco estándar
+	cyanBright := "\x1b[36;1m"      // Cian brillante para logo y selección activa
+	whiteBold := "\x1b[1;37m"      // Blanco negrita para títulos
+	redBright := "\x1b[31;1m"      // Rojo brillante para errores
+	greenBright := "\x1b[32;1m"    // Verde para mensajes de éxito
 	reset := "\x1b[0m"
 
 	boxWidth := 74 // Ancho interior exacto de la caja
 
-	// Dibujar borde superior estilizado: ╔[ ID: GENTLE-BRIDGE ]════════════════════════════════════[ STATUS: ONLINE ]╗
-	s.WriteString(greenBright + "╔[ ID: GENTLE-BRIDGE ]" + strings.Repeat("═", 31) + "[ STATUS: ACTIVE ]╗" + reset + "\n")
+	// Dibujar borde superior estilizado: ╔[ ID: GENTLE-BRIDGE ]═════════════════════════════════════[ STATUS: ACTIVE ]╗
+	s.WriteString(borderCol + "╔[ ID: GENTLE-BRIDGE ]" + strings.Repeat("═", 37) + "[ STATUS: ACTIVE ]╗" + reset + "\n")
 
 	// Línea en blanco
-	s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+	s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
-	// Dibujar logo COBIES en verde/cian brillante centrado
+	// Dibujar logo COBIES en cian brillante centrado
 	cobiesLines := strings.Split(asciiCobies, "\n")
 	for _, line := range cobiesLines {
 		if strings.TrimSpace(line) == "" {
@@ -218,87 +223,87 @@ func (m tuiModel) View() string {
 		}
 		// Centrar la línea sumando espacios
 		centeredLine := strings.Repeat(" ", 14) + cyanBright + line + reset
-		s.WriteString(greenBright + "║ " + reset + padLine(centeredLine, boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(centeredLine, boxWidth) + borderCol + " ║" + reset + "\n")
 	}
 
-	s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+	s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
 	// Separador intermedio
-	s.WriteString(greenBright + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
+	s.WriteString(borderCol + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
 
 	switch m.state {
 	case "menu":
-		s.WriteString(greenBright + "║ " + reset + padLine(whiteBold+"Seleccioná una opción para continuar:"+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(whiteBold+"Seleccioná una opción para continuar:"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
 		for i, choice := range m.choices {
 			if m.cursor == i {
 				line := "  " + cyanBright + "❯ " + whiteBold + choice + reset
-				s.WriteString(greenBright + "║ " + reset + padLine(line, boxWidth) + greenBright + " ║" + reset + "\n")
+				s.WriteString(borderCol + "║ " + reset + padLine(line, boxWidth) + borderCol + " ║" + reset + "\n")
 			} else {
-				line := "    " + choice
-				s.WriteString(greenBright + "║ " + reset + padLine(line, boxWidth) + greenBright + " ║" + reset + "\n")
+				line := "    " + textDim + choice + reset
+				s.WriteString(borderCol + "║ " + reset + padLine(line, boxWidth) + borderCol + " ║" + reset + "\n")
 			}
 		}
 
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
 		if m.infoMessage != "" {
-			s.WriteString(greenBright + "║ " + reset + padLine(greenBright+m.infoMessage+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-			s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine(greenBright+m.infoMessage+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 		}
 
-		s.WriteString(greenBright + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
-		helpText := greenDim + "j/k o ↑/↓: navegar • enter: seleccionar • q: salir" + reset
-		s.WriteString(greenBright + "║ " + reset + padLine("  "+helpText, boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
+		helpText := borderCol + "j/k o ↑/↓: navegar • enter: seleccionar • q: salir" + reset
+		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
 
 	case "add":
-		s.WriteString(greenBright + "║ " + reset + padLine(whiteBold+"AGREGAR CARPETA ORIGEN (Obsidian/Skills)"+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine(" Ingresá la ruta absoluta al directorio de notas:", boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(whiteBold+"AGREGAR CARPETA ORIGEN (Obsidian/Skills)"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(" Ingresá la ruta absoluta al directorio de notas:", boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
 		tiStr := "   " + m.textInput.View()
-		s.WriteString(greenBright + "║ " + reset + padLine(tiStr, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(tiStr, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
 		if m.errMessage != "" {
-			s.WriteString(greenBright + "║ " + reset + padLine("   \x1b[31;1m[Error] "+m.errMessage+reset, boxWidth) + greenBright + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine("   "+redBright+"[Error] "+m.errMessage+reset, boxWidth) + borderCol + " ║" + reset + "\n")
 		} else {
-			s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 		}
 
-		s.WriteString(greenBright + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
-		helpText := greenDim + "enter: confirmar • esc: volver al menú" + reset
-		s.WriteString(greenBright + "║ " + reset + padLine("  "+helpText, boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
+		helpText := borderCol + "enter: confirmar • esc: volver al menú" + reset
+		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
 
 	case "success":
-		s.WriteString(greenBright + "║ " + reset + padLine(whiteBold+"OPERACIÓN COMPLETADA CON ÉXITO"+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(whiteBold+"OPERACIÓN COMPLETADA CON ÉXITO"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
 
 		lines := strings.Split(m.infoMessage, "\n")
 		for _, line := range lines {
-			s.WriteString(greenBright + "║ " + reset + padLine("  "+greenBright+line+reset, boxWidth) + greenBright + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine("  "+greenBright+line+reset, boxWidth) + borderCol + " ║" + reset + "\n")
 		}
 
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
-		helpText := greenDim + "Presioná Enter o Esc para volver al menú" + reset
-		s.WriteString(greenBright + "║ " + reset + padLine("  "+helpText, boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
+		helpText := borderCol + "Presioná Enter o Esc para volver al menú" + reset
+		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
 
 	case "version":
-		s.WriteString(greenBright + "║ " + reset + padLine(whiteBold+"INFORMACIÓN DE VERSIÓN"+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("  Versión instalada: "+whiteBold+"v1.0.0"+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("  Configuración activa: "+greenBright+m.activePath+reset, boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "║ " + reset + padLine("", boxWidth) + greenBright + " ║" + reset + "\n")
-		s.WriteString(greenBright + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
-		helpText := greenDim + "Presioná Enter o Esc para volver al menú" + reset
-		s.WriteString(greenBright + "║ " + reset + padLine("  "+helpText, boxWidth) + greenBright + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine(whiteBold+"INFORMACIÓN DE VERSIÓN"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("  Versión instalada: "+whiteBold+"v1.0.0"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("  Configuración activa: "+greenBright+m.activePath+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
+		helpText := borderCol + "Presioná Enter o Esc para volver al menú" + reset
+		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
 	}
 
-	// Dibujar borde inferior estilizado: ╚[ ENDEVS CONTROL PLANE ]═════════════════════════════════[ v1.0 - 2026 ]╝
-	s.WriteString(greenBright + "╚[ ENDEVS CONTROL PLANE ]" + strings.Repeat("═", 34) + "[ v1.0 - 2026 ]╝" + reset + "\n")
+	// Dibujar borde inferior estilizado: ╚[ ENDEVS CONTROL PLANE ]══════════════════════════════════[ v1.0 - 2026 ]╝
+	s.WriteString(borderCol + "╚[ ENDEVS CONTROL PLANE ]" + strings.Repeat("═", 38) + "[ v1.0 - 2026 ]╝" + reset + "\n")
 
 	return s.String()
 }
@@ -330,7 +335,7 @@ func runInteractiveMenu(stdout, stderr io.Writer, configPath string, dryRun bool
 		}
 		return runWatch(cfg, stdout, stderr)
 	case "exit":
-		fmt.Fprintln(stdout, "\x1b[32;1m[+] ¡Chau! Gracias por usar gentle-skills-bridge.\x1b[0m")
+		fmt.Fprintln(stdout, "\x1b[36;1m[+] ¡Chau! Gracias por usar gentle-skills-bridge.\x1b[0m")
 		return 0
 	}
 
