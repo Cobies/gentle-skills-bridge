@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"gentle-skills-bridge/bridge"
-	"github.com/fsnotify/fsnotify"
 	"github.com/mattn/go-isatty"
 )
 
@@ -34,8 +33,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  gentle-skills-bridge <comando> [opciones]")
 		fmt.Fprintln(stdout, "\nComandos:")
 		fmt.Fprintln(stdout, "  sync     Realiza una sincronización única de skills")
-		fmt.Fprintln(stdout, "  watch    Monitorea directorios en tiempo real y sincroniza cambios")
 		fmt.Fprintln(stdout, "  add      Agrega la carpeta actual (o la especificada) como origen de skills")
+		fmt.Fprintln(stdout, "  remove   Remueve la carpeta especificada de los orígenes de skills")
 		fmt.Fprintln(stdout, "  version  Muestra la versión instalada")
 		fmt.Fprintln(stdout, "\nOpciones:")
 		fs.PrintDefaults()
@@ -79,17 +78,46 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		cfg.DryRun = *dryRun || hasDryRun
 		return runSync(cfg, stdout, stderr)
-	case "watch":
-		cfg, _, err := loadConfig(*configPath, stdout)
+	case "remove", "rm":
+		targetPath := "."
+		if len(parsedArgs) > 1 {
+			targetPath = parsedArgs[1]
+		}
+
+		absPath, err := filepath.Abs(targetPath)
+		if err != nil {
+			fmt.Fprintf(stderr, "[error] No se pudo resolver la ruta absoluta: %v\n", err)
+			return 1
+		}
+		absClean := filepath.Clean(absPath)
+
+		cfg, activePath, err := loadConfig(*configPath, stdout)
 		if err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
 			return 1
 		}
-		if *dryRun {
-			fmt.Fprintln(stderr, "[error] El modo dry-run no está soportado en watch")
+
+		index := -1
+		for i, src := range cfg.Sources {
+			if filepath.Clean(src) == absClean {
+				index = i
+				break
+			}
+		}
+
+		if index == -1 {
+			fmt.Fprintf(stdout, "[info] La carpeta no estaba registrada en los orígenes: %s\n", absClean)
+			return 0
+		}
+
+		cfg.Sources = append(cfg.Sources[:index], cfg.Sources[index+1:]...)
+		if err := saveConfig(activePath, cfg); err != nil {
+			fmt.Fprintf(stderr, "[error] No se pudo guardar la configuración: %v\n", err)
 			return 1
 		}
-		return runWatch(cfg, stdout, stderr)
+
+		fmt.Fprintf(stdout, "[info] Carpeta removida con éxito de los orígenes en %s:\n  -> %s\n", activePath, absClean)
+		return 0
 	case "add":
 		targetPath := "."
 		if len(parsedArgs) > 1 {
@@ -194,6 +222,7 @@ func loadConfig(path string, stdout io.Writer) (*bridge.Config, string, error) {
 		SyncToEngram:       true,
 		EngramProject:      "global",
 		WatchIntervalMS:    1000,
+		PruneRemoved:       true, // Default to true so orphaned files are cleaned up
 	}
 
 	if err := saveConfig(globalPath, defaultCfg); err != nil {
@@ -263,100 +292,4 @@ func runSync(cfg *bridge.Config, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func runWatch(cfg *bridge.Config, stdout, stderr io.Writer) int {
-	fmt.Fprintln(stdout, "[info] Iniciando modo monitoreo (watch)...")
-
-	// Run initial sync
-	runSync(cfg, stdout, stderr)
-
-	// Setup fsnotify watcher
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		fmt.Fprintf(stderr, "[error] No se pudo crear el monitor de archivos: %v\n", err)
-		return 1
-	}
-	defer watcher.Close()
-
-	// Register source directories
-	for _, src := range cfg.Sources {
-		cleanSrc := filepath.Clean(src)
-		if _, err := os.Stat(cleanSrc); os.IsNotExist(err) {
-			fmt.Fprintf(stdout, "[warning] La carpeta de origen no existe, saltando: %s\n", cleanSrc)
-			continue
-		}
-
-		// Watch directory and all subdirectories
-		err = filepath.Walk(cleanSrc, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				// Skip hidden dirs
-				if filepath.Base(path) != filepath.Base(cleanSrc) && filepath.Base(path)[0] == '.' {
-					return filepath.SkipDir
-				}
-				err = watcher.Add(path)
-				if err != nil {
-					fmt.Fprintf(stdout, "[warning] No se pudo monitorear la carpeta %s: %v\n", path, err)
-				} else {
-					fmt.Fprintf(stdout, "[watch] Monitoreando carpeta: %s\n", path)
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			fmt.Fprintf(stderr, "[error] Falló el registro de directorios en %s: %v\n", cleanSrc, err)
-		}
-	}
-
-	// Debounce timer channel
-	var debounceTimer *time.Timer
-	debounceDuration := time.Duration(cfg.WatchIntervalMS) * time.Millisecond
-	eventChan := make(chan bool)
-
-	// Event handling loop
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				// We only care about modifications, creations and deletions of markdown files
-				if filepath.Ext(event.Name) == ".md" {
-					if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) || event.Has(fsnotify.Remove) {
-						fmt.Fprintf(stdout, "[watch] Cambio detectado: %s (%s)\n", event.Name, event.Op)
-						eventChan <- true
-					}
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				fmt.Fprintf(stdout, "[watch-error] %v\n", err)
-			}
-		}
-	}()
-
-	// Debounce worker loop
-	fmt.Fprintln(stdout, "\n[watch] Esperando cambios en tiempo real... (Presiona Ctrl+C para salir)")
-	for {
-		select {
-		case <-eventChan:
-			if debounceTimer != nil {
-				debounceTimer.Stop()
-			}
-			debounceTimer = time.AfterFunc(debounceDuration, func() {
-				fmt.Fprintln(stdout, "\n[watch] Procesando cambios...")
-				res, err := bridge.SyncFiles(cfg)
-				if err != nil {
-					fmt.Fprintf(stdout, "[watch-error] Falló la sincronización: %v\n", err)
-				} else if res.FailedCount > 0 {
-					fmt.Fprintf(stdout, "[watch] Completado con %d errores\n", res.FailedCount)
-				} else {
-					fmt.Fprintln(stdout, "[watch] Sincronización completada con éxito.")
-				}
-			})
-		}
-	}
-}
+// runWatch was removed as we transition to explicit, deterministic syncing.

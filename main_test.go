@@ -105,3 +105,36 @@ func TestRunSyncDryRunAfterCommand(t *testing.T) {
 		t.Fatalf("dry-run wrote target or stat failed unexpectedly: %v", err)
 	}
 }
+
+func TestRunRemove(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	tempDir := t.TempDir()
+	sourceDir := filepath.Join(tempDir, "source")
+	configPath := filepath.Join(tempDir, "config.json")
+
+	if err := os.MkdirAll(sourceDir, 0755); err != nil {
+		t.Fatalf("MkdirAll() error = %v", err)
+	}
+
+	config := `{"sources":["` + filepath.ToSlash(sourceDir) + `"],"targets":[],"watch_interval_ms":1000}`
+	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+		t.Fatalf("WriteFile() config error = %v", err)
+	}
+
+	// Remove sourceDir
+	code := run([]string{"-config", configPath, "remove", sourceDir}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run() exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+
+	// Read config back to verify it was removed
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("ReadFile() config error = %v", err)
+	}
+
+	if strings.Contains(string(content), filepath.ToSlash(sourceDir)) {
+		t.Fatalf("config still contains removed source: %s", string(content))
+	}
+}

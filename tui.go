@@ -43,16 +43,17 @@ func padLine(content string, width int) string {
 }
 
 type tuiModel struct {
-	choices     []string
-	cursor      int
-	selected    string
-	configPath  string
-	cfg         *bridge.Config
-	activePath  string
-	state       string // "menu", "add", "version", "success"
-	textInput   textinput.Model
-	errMessage  string
-	infoMessage string
+	choices      []string
+	cursor       int
+	removeCursor int
+	selected     string
+	configPath   string
+	cfg          *bridge.Config
+	activePath   string
+	state        string // "menu", "add", "remove", "version", "success"
+	textInput    textinput.Model
+	errMessage   string
+	infoMessage  string
 }
 
 func initialModel(configPath string, cfg *bridge.Config, activePath string) tuiModel {
@@ -63,13 +64,14 @@ func initialModel(configPath string, cfg *bridge.Config, activePath string) tuiM
 	ti.Width = 45
 
 	return tuiModel{
-		choices:    []string{"Sincronizar Skills (sync)", "Monitorear en tiempo real (watch)", "Agregar carpeta origen (add)", "Ver versión (version)", "Salir"},
-		cursor:     0,
-		configPath: configPath,
-		cfg:        cfg,
-		activePath: activePath,
-		state:      "menu",
-		textInput:  ti,
+		choices:      []string{"Sincronizar Skills (sync)", "Agregar carpeta origen (add)", "Quitar carpeta origen (remove)", "Ver versión (version)", "Salir"},
+		cursor:       0,
+		removeCursor: 0,
+		configPath:   configPath,
+		cfg:          cfg,
+		activePath:   activePath,
+		state:        "menu",
+		textInput:    ti,
 	}
 }
 
@@ -107,13 +109,14 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case 0: // Sync
 					m.selected = "sync"
 					return m, tea.Quit
-				case 1: // Watch
-					m.selected = "watch"
-					return m, tea.Quit
-				case 2: // Add Source
+				case 1: // Add Source
 					m.state = "add"
 					m.textInput.Reset()
 					m.textInput.Focus()
+					m.errMessage = ""
+				case 2: // Remove Source
+					m.state = "remove"
+					m.removeCursor = 0
 					m.errMessage = ""
 				case 3: // Version
 					m.state = "version"
@@ -182,6 +185,39 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.textInput, cmd = m.textInput.Update(msg)
 			return m, cmd
 
+		case "remove":
+			switch msg.String() {
+			case "esc", "q":
+				m.state = "menu"
+				m.infoMessage = ""
+				return m, nil
+			case "up", "k":
+				if m.removeCursor > 0 {
+					m.removeCursor--
+				}
+			case "down", "j":
+				if m.removeCursor < len(m.cfg.Sources)-1 {
+					m.removeCursor++
+				}
+			case "enter":
+				if len(m.cfg.Sources) == 0 {
+					m.state = "menu"
+					return m, nil
+				}
+
+				removedPath := m.cfg.Sources[m.removeCursor]
+				m.cfg.Sources = append(m.cfg.Sources[:m.removeCursor], m.cfg.Sources[m.removeCursor+1:]...)
+
+				if err := saveConfig(m.activePath, m.cfg); err != nil {
+					m.errMessage = fmt.Sprintf("Error al guardar config: %v", err)
+					return m, nil
+				}
+
+				m.infoMessage = fmt.Sprintf("¡Carpeta removida de los orígenes!\n-> %s", removedPath)
+				m.state = "success"
+				return m, nil
+			}
+
 		case "version", "success":
 			switch msg.String() {
 			case "enter", "esc", "q":
@@ -199,12 +235,12 @@ func (m tuiModel) View() string {
 	var s strings.Builder
 
 	// Colores ANSI sobrios (tonalidad normal de terminal estándar)
-	borderCol := "\x1b[90m"        // Gris oscuro para contornos (tonalidad normal)
-	textDim := "\x1b[37m"          // Blanco estándar
-	cyanBright := "\x1b[36;1m"      // Cian brillante para logo y selección activa
-	whiteBold := "\x1b[1;37m"      // Blanco negrita para títulos
-	redBright := "\x1b[31;1m"      // Rojo brillante para errores
-	greenBright := "\x1b[32;1m"    // Verde para mensajes de éxito
+	borderCol := "\x1b[90m"       // Gris oscuro para contornos (tonalidad normal)
+	textDim := "\x1b[37m"         // Blanco estándar
+	cyanBright := "\x1b[36;1m"     // Cian brillante para logo y selección activa
+	whiteBold := "\x1b[1;37m"     // Blanco negrita para títulos
+	redBright := "\x1b[31;1m"     // Rojo brillante para errores
+	greenBright := "\x1b[32;1m"   // Verde para éxito
 	reset := "\x1b[0m"
 
 	boxWidth := 74 // Ancho interior exacto de la caja
@@ -277,6 +313,33 @@ func (m tuiModel) View() string {
 		helpText := borderCol + "enter: confirmar • esc: volver al menú" + reset
 		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
 
+	case "remove":
+		s.WriteString(borderCol + "║ " + reset + padLine(whiteBold+"QUITAR CARPETA ORIGEN"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+
+		if len(m.cfg.Sources) == 0 {
+			s.WriteString(borderCol + "║ " + reset + padLine(" No hay carpetas origen registradas actualmente.", boxWidth) + borderCol + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+		} else {
+			s.WriteString(borderCol + "║ " + reset + padLine(" Seleccioná la carpeta que querés quitar y presioná Enter:", boxWidth) + borderCol + " ║" + reset + "\n")
+			s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+
+			for i, src := range m.cfg.Sources {
+				if m.removeCursor == i {
+					line := "  " + redBright + "✗ " + whiteBold + src + reset
+					s.WriteString(borderCol + "║ " + reset + padLine(line, boxWidth) + borderCol + " ║" + reset + "\n")
+				} else {
+					line := "    " + textDim + src + reset
+					s.WriteString(borderCol + "║ " + reset + padLine(line, boxWidth) + borderCol + " ║" + reset + "\n")
+				}
+			}
+		}
+
+		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
+		s.WriteString(borderCol + "╠" + strings.Repeat("═", boxWidth+2) + "╣" + reset + "\n")
+		helpText := borderCol + "j/k o ↑/↓: navegar • enter: quitar carpeta • esc: volver" + reset
+		s.WriteString(borderCol + "║ " + reset + padLine("  "+helpText, boxWidth) + borderCol + " ║" + reset + "\n")
+
 	case "success":
 		s.WriteString(borderCol + "║ " + reset + padLine(whiteBold+"OPERACIÓN COMPLETADA CON ÉXITO"+reset, boxWidth) + borderCol + " ║" + reset + "\n")
 		s.WriteString(borderCol + "║ " + reset + padLine("", boxWidth) + borderCol + " ║" + reset + "\n")
@@ -328,12 +391,6 @@ func runInteractiveMenu(stdout, stderr io.Writer, configPath string, dryRun bool
 	case "sync":
 		cfg.DryRun = dryRun
 		return runSync(cfg, stdout, stderr)
-	case "watch":
-		if dryRun {
-			fmt.Fprintln(stderr, "[error] El modo dry-run no está soportado en watch")
-			return 1
-		}
-		return runWatch(cfg, stdout, stderr)
 	case "exit":
 		fmt.Fprintln(stdout, "\x1b[36;1m[+] ¡Chau! Gracias por usar gentle-skills-bridge.\x1b[0m")
 		return 0

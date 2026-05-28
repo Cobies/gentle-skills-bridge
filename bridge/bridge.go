@@ -136,6 +136,22 @@ func SyncFiles(cfg *Config) (*SyncResult, error) {
 				skillFolder := filepath.Join(targetDir, skill.Name)
 				targetFile := filepath.Join(skillFolder, "SKILL.md")
 				targetExists := pathExists(targetFile)
+
+				var isIdentical bool
+				if targetExists {
+					if !skill.Normalized {
+						isIdentical = filesIdentical(path, targetFile)
+					} else {
+						isIdentical = fileContentIdentical(skill.Content, targetFile)
+					}
+				}
+
+				if isIdentical {
+					result.Skipped++
+					syncedByTarget[cleanTargetDir][skill.Name] = true
+					continue
+				}
+
 				if cfg.DryRun {
 					if !targetExists {
 						result.PlannedCreates = append(result.PlannedCreates, targetFile)
@@ -388,4 +404,56 @@ func triggerGentleRegistryRefresh() {
 	} else {
 		fmt.Println("[sync] Refreshed gentle-ai skill registry successfully.")
 	}
+}
+
+// filesIdentical compares two files byte by byte to check if they are identical.
+func filesIdentical(path1, path2 string) bool {
+	f1, err := os.Open(path1)
+	if err != nil {
+		return false
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(path2)
+	if err != nil {
+		return false
+	}
+	defer f2.Close()
+
+	s1, err := f1.Stat()
+	if err != nil {
+		return false
+	}
+	s2, err := f2.Stat()
+	if err != nil {
+		return false
+	}
+	if s1.Size() != s2.Size() {
+		return false
+	}
+
+	b1 := make([]byte, 64*1024)
+	b2 := make([]byte, 64*1024)
+	for {
+		n1, err1 := f1.Read(b1)
+		n2, err2 := f2.Read(b2)
+		if err1 != nil || err2 != nil {
+			if err1 == io.EOF && err2 == io.EOF {
+				return true
+			}
+			return false
+		}
+		if n1 != n2 || !bytes.Equal(b1[:n1], b2[:n2]) {
+			return false
+		}
+	}
+}
+
+// fileContentIdentical compares string content with file content to check if they are identical.
+func fileContentIdentical(content, path string) bool {
+	existingBytes, err := os.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	return string(existingBytes) == content
 }
