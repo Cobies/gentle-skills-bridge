@@ -1,0 +1,11 @@
+{
+  "sources": [
+    "C:/path/to/your/obsidian/skills"
+  ],
+  "targets": [],
+  "auto_discover_agents": true,
+  "sync_to_engram": true,
+  "engram_project": "global",
+  "watch_interval_ms": 1000,
+  "prune_removed": false
+}
