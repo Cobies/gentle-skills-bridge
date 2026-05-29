@@ -63,6 +63,7 @@ func getChoices(cfg *bridge.Config) []string {
 	}
 	return []string{
 		"Sincronizar skills ahora",
+		"Instalar ruteador MCP en agentes (Bootstrap)",
 		"Agregar carpeta origen de skills",
 		"Quitar carpeta origen de skills",
 		fmt.Sprintf("Alternar sync_to_engram %s", syncStatus),
@@ -124,16 +125,19 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case 0: // Sync
 					m.selected = "sync"
 					return m, tea.Quit
-				case 1: // Add Source
+				case 1: // Bootstrap MCP Router
+					m.selected = "bootstrap"
+					return m, tea.Quit
+				case 2: // Add Source
 					m.state = "add"
 					m.textInput.Reset()
 					m.textInput.Focus()
 					m.errMessage = ""
-				case 2: // Remove Source
+				case 3: // Remove Source
 					m.state = "remove"
 					m.removeCursor = 0
 					m.errMessage = ""
-				case 3: // Toggle sync_to_engram
+				case 4: // Toggle sync_to_engram
 					m.cfg.SyncToEngram = !m.cfg.SyncToEngram
 					if err := saveConfig(m.activePath, m.cfg); err != nil {
 						m.errMessage = fmt.Sprintf("Error al guardar config: %v", err)
@@ -146,9 +150,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.infoMessage = fmt.Sprintf("Sincronización con Engram %s", status)
 					m.choices = getChoices(m.cfg)
 					m.state = "success"
-				case 4: // Version
+				case 5: // Version
 					m.state = "version"
-				case 5: // Exit
+				case 6: // Exit
 					m.selected = "exit"
 					return m, tea.Quit
 				}
@@ -425,6 +429,12 @@ func runInteractiveMenu(stdout, stderr io.Writer, configPath string, dryRun bool
 	case "sync":
 		cfg.DryRun = dryRun
 		return runSync(cfg, stdout, stderr)
+	case "bootstrap":
+		if err := bridge.BootstrapRouter(cfg); err != nil {
+			fmt.Fprintf(stderr, "[error] Falló la inyección del ruteador: %v\n", err)
+			return 1
+		}
+		return 0
 	case "exit":
 		fmt.Fprintln(stdout, "\x1b[36;1m[+] ¡Chau! Gracias por usar gentle-skills-bridge.\x1b[0m")
 		return 0

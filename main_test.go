@@ -145,17 +145,17 @@ func TestRunRemove(t *testing.T) {
 func TestGetChoices(t *testing.T) {
 	cfg := &bridge.Config{SyncToEngram: true}
 	choices := getChoices(cfg)
-	if len(choices) != 6 {
-		t.Fatalf("expected 6 choices, got %d", len(choices))
+	if len(choices) != 7 {
+		t.Fatalf("expected 7 choices, got %d", len(choices))
 	}
-	if !strings.Contains(choices[3], "[ACTIVO]") {
-		t.Fatalf("expected choices[3] to contain [ACTIVO], got %q", choices[3])
+	if !strings.Contains(choices[4], "[ACTIVO]") {
+		t.Fatalf("expected choices[4] to contain [ACTIVO], got %q", choices[4])
 	}
 
 	cfg.SyncToEngram = false
 	choices = getChoices(cfg)
-	if !strings.Contains(choices[3], "[INACTIVO]") {
-		t.Fatalf("expected choices[3] to contain [INACTIVO], got %q", choices[3])
+	if !strings.Contains(choices[4], "[INACTIVO]") {
+		t.Fatalf("expected choices[4] to contain [INACTIVO], got %q", choices[4])
 	}
 }
 
@@ -173,7 +173,7 @@ func TestTuiModelToggleSync(t *testing.T) {
 	}
 
 	m := initialModel(configPath, cfg, configPath)
-	m.cursor = 3 // Index for toggle sync
+	m.cursor = 4 // Index for toggle sync
 
 	// Simulate pressing enter
 	rawModel, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
@@ -193,7 +193,7 @@ func TestTuiModelToggleSync(t *testing.T) {
 
 	// Now check if it toggles back to active
 	updatedModel.state = "menu"
-	updatedModel.cursor = 3
+	updatedModel.cursor = 4
 
 	rawModel2, _ := updatedModel.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	updatedModel2 := rawModel2.(tuiModel)

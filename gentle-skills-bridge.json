@@ -6,7 +6,7 @@
     "architecture":  {
                          "64bit":  {
                                        "url":  "https://github.com/tu-usuario/gentle-skills-bridge/releases/download/v1.0.0/gentle-skills-bridge-windows-amd64.zip",
-                                       "hash":  "853ea1818bc0157cf77e5f9c29d521f26c9e30983d975843bf80936a4d4195fc"
+                                       "hash":  "87aaf35bbc98b33024b4c609aeb4798b338d3aa0430a9497ee95f847bb25cc6c"
                                    }
                      },
     "bin":  "gentle-skills-bridge.exe",
