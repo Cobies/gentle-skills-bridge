@@ -385,6 +385,15 @@ func WriteAntigravityToolSchemas(home string) error {
   }
 }
 `
+	getSkillsConfigurationSchema := `{
+  "name": "get_skills_configuration",
+  "description": "Retrieve the list of configured source folders where skills are scanned.",
+  "parameters": {
+    "type": "object",
+    "properties": {}
+  }
+}
+`
 
 	var firstErr error
 	for _, dir := range dirs {
@@ -398,6 +407,7 @@ func WriteAntigravityToolSchemas(home string) error {
 
 		err1 := os.WriteFile(filepath.Join(dir, "search_skills.json"), []byte(searchSkillsSchema), 0644)
 		err2 := os.WriteFile(filepath.Join(dir, "get_skill.json"), []byte(getSkillSchema), 0644)
+		err3 := os.WriteFile(filepath.Join(dir, "get_skills_configuration.json"), []byte(getSkillsConfigurationSchema), 0644)
 
 		if err1 == nil {
 			fmt.Printf("[bootstrap] Esquema search_skills.json creado en: %s\n", filepath.Join(dir, "search_skills.json"))
@@ -408,6 +418,11 @@ func WriteAntigravityToolSchemas(home string) error {
 			fmt.Printf("[bootstrap] Esquema get_skill.json creado en: %s\n", filepath.Join(dir, "get_skill.json"))
 		} else if firstErr == nil {
 			firstErr = err2
+		}
+		if err3 == nil {
+			fmt.Printf("[bootstrap] Esquema get_skills_configuration.json creado en: %s\n", filepath.Join(dir, "get_skills_configuration.json"))
+		} else if firstErr == nil {
+			firstErr = err3
 		}
 	}
 

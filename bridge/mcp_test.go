@@ -125,8 +125,8 @@ func TestMCPResourcesAndTools(t *testing.T) {
 		t.Fatalf("failed to parse tools result: %v", err)
 	}
 
-	if len(toolsResult.Tools) != 2 {
-		t.Fatalf("expected 2 tools, got %d", len(toolsResult.Tools))
+	if len(toolsResult.Tools) != 3 {
+		t.Fatalf("expected 3 tools, got %d", len(toolsResult.Tools))
 	}
 
 	// 3. Test tools/call search_skills

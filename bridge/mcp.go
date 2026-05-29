@@ -327,6 +327,14 @@ func handleRequest(cfg *Config, stdout io.Writer, req *jsonRPCRequest) {
 					Required: []string{"name"},
 				},
 			},
+			{
+				Name:        "get_skills_configuration",
+				Description: "Retrieve the list of configured source folders where skills are scanned.",
+				InputSchema: mcpToolInputSchema{
+					Type: "object",
+					Properties: map[string]interface{}{},
+				},
+			},
 		}
 		sendResponse(stdout, req.ID, listToolsResult{Tools: tools})
 
@@ -340,7 +348,7 @@ func handleRequest(cfg *Config, stdout io.Writer, req *jsonRPCRequest) {
 			return
 		}
 
-		skills, _, err := scanSkills(cfg)
+		skills, paths, err := scanSkills(cfg)
 		if err != nil {
 			sendErrorResponse(stdout, req.ID, -32603, "Internal error", err.Error())
 			return
@@ -413,11 +421,29 @@ func handleRequest(cfg *Config, stdout io.Writer, req *jsonRPCRequest) {
 				return
 			}
 
+			path := paths[args.Name]
+			responseText := fmt.Sprintf("Path: %s\n\n%s", path, skill.Content)
+
 			sendResponse(stdout, req.ID, callToolResult{
 				Content: []toolContentText{
 					{
 						Type: "text",
-						Text: skill.Content,
+						Text: responseText,
+					},
+				},
+			})
+
+		} else if params.Name == "get_skills_configuration" {
+			var sourcesText []string
+			for _, src := range cfg.Sources {
+				sourcesText = append(sourcesText, fmt.Sprintf("- %s", src))
+			}
+			responseText := "Configured source directories:\n\n" + strings.Join(sourcesText, "\n")
+			sendResponse(stdout, req.ID, callToolResult{
+				Content: []toolContentText{
+					{
+						Type: "text",
+						Text: responseText,
 					},
 				},
 			})

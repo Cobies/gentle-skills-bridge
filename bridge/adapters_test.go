@@ -261,6 +261,11 @@ func TestWriteAntigravityToolSchemas(t *testing.T) {
 		t.Fatal("get_skill.json schema file was not written to CLI dir")
 	}
 
+	getSkillsConfigPath := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge", "get_skills_configuration.json")
+	if _, err := os.Stat(getSkillsConfigPath); os.IsNotExist(err) {
+		t.Fatal("get_skills_configuration.json schema file was not written to CLI dir")
+	}
+
 	searchSkillsIDEDir := filepath.Join(home, ".gemini", "antigravity", "mcp", "gentle-skills-bridge", "search_skills.json")
 	if _, err := os.Stat(searchSkillsIDEDir); os.IsNotExist(err) {
 		t.Fatal("search_skills.json schema file was not written to IDE dir")
@@ -269,5 +274,10 @@ func TestWriteAntigravityToolSchemas(t *testing.T) {
 	getSkillIDEDir := filepath.Join(home, ".gemini", "antigravity", "mcp", "gentle-skills-bridge", "get_skill.json")
 	if _, err := os.Stat(getSkillIDEDir); os.IsNotExist(err) {
 		t.Fatal("get_skill.json schema file was not written to IDE dir")
+	}
+
+	getSkillsConfigIDEDir := filepath.Join(home, ".gemini", "antigravity", "mcp", "gentle-skills-bridge", "get_skills_configuration.json")
+	if _, err := os.Stat(getSkillsConfigIDEDir); os.IsNotExist(err) {
+		t.Fatal("get_skills_configuration.json schema file was not written to IDE dir")
 	}
 }
