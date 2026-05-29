@@ -35,6 +35,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  sync     Realiza una sincronización única de skills")
 		fmt.Fprintln(stdout, "  add      Agrega la carpeta actual (o la especificada) como origen de skills")
 		fmt.Fprintln(stdout, "  remove   Remueve la carpeta especificada de los orígenes de skills")
+		fmt.Fprintln(stdout, "  mcp      Inicia el servidor MCP (Model Context Protocol) sobre stdio")
 		fmt.Fprintln(stdout, "  version  Muestra la versión instalada")
 		fmt.Fprintln(stdout, "\nOpciones:")
 		fs.PrintDefaults()
@@ -69,6 +70,17 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch cmd {
 	case "version":
 		fmt.Fprintf(stdout, "gentle-skills-bridge v%s\n", version)
+		return 0
+	case "mcp":
+		cfg, _, err := loadConfig(*configPath, stdout)
+		if err != nil {
+			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
+			return 1
+		}
+		if err := bridge.StartMCPServer(cfg); err != nil {
+			fmt.Fprintf(stderr, "[error] Servidor MCP terminado con error: %v\n", err)
+			return 1
+		}
 		return 0
 	case "sync":
 		cfg, _, err := loadConfig(*configPath, stdout)

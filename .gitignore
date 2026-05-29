@@ -15,7 +15,7 @@ coverage
 .atl/
 config.json
 
-# IDEs
+# IDEs and Agent CLI folders
 .idea/
 .vscode/
 *.suo
@@ -23,3 +23,4 @@ config.json
 *.njsproj
 *.sln
 *.sw?
+.antigravitycli/
