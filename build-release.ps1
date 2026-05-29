@@ -1,7 +1,7 @@
 # build-release.ps1
 # Script de automatización de releases locales para Scoop y empaquetado.
 
-$Version = "1.0.6"
+$Version = "1.0.7"
 $ZipFile = "gentle-skills-bridge-windows-amd64.zip"
 $ManifestFile = "gentle-skills-bridge.json"
 

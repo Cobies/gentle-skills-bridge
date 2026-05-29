@@ -39,16 +39,4 @@ changelog:
       - '^docs:'
       - '^test:'
 
-scoops:
-  - name: gentle-skills-bridge
-    repository:
-      owner: Cobies
-      name: scoop-bucket
-      branch: main
-      token: "{{ .Env.GITHUB_TOKEN }}"
-    commit_author:
-      name: goreleaserbot
-      email: goreleaser@carlosbecker.com
-    homepage: "https://github.com/Cobies/gentle-skills-bridge"
-    description: "Sincronizador de Skills en tiempo real para Gentle-AI y Engram. Inspirado en Gentleman Programming."
-    license: MIT
+# scoops configuration removed because the user installs using a local manifest.
