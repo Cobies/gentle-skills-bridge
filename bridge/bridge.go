@@ -521,6 +521,26 @@ Antes de proceder con cualquier tarea o resolver un problema técnico:
 		return fmt.Errorf("no se pudo instalar el ruteador de MCP en ningún agente")
 	}
 
+	// Configurar automáticamente el servidor MCP en los agentes detectados
+	home, err := os.UserHomeDir()
+	if err == nil {
+		execPath, err := os.Executable()
+		if err != nil {
+			execPath = "gentle-skills-bridge"
+		}
+		if absPath, err := filepath.Abs(execPath); err == nil {
+			execPath = absPath
+		}
+		agents := GetInstalledAgents(home)
+		for _, agent := range agents {
+			if err := ConfigureAgentMCP(home, agent, execPath); err != nil {
+				fmt.Fprintf(os.Stderr, "[warning] No se pudo configurar el MCP para el agente %s: %v\n", agent, err)
+			}
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "[warning] No se pudo obtener la carpeta home para configurar MCP: %v\n", err)
+	}
+
 	// Trigger registry refresh
 	triggerGentleRegistryRefresh()
 	return nil

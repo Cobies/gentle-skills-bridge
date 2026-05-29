@@ -1,7 +1,9 @@
 package bridge
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -106,5 +108,105 @@ func TestDiscoverTargetsInvalidJSON(t *testing.T) {
 	var syntaxErr *os.PathError
 	if errors.As(err, &syntaxErr) {
 		t.Fatalf("discoverTargets() error unexpectedly wraps PathError: %v", err)
+	}
+}
+
+func TestConfigureAgentMCP(t *testing.T) {
+	home := t.TempDir()
+	execPath := filepath.Join(home, "my-bin")
+
+	// 1. Test Claude Code JSON configuration (creation & merging)
+	claudePath := filepath.Join(home, ".claude.json")
+	writeTestFile(t, claudePath, `{"other_key": "some_value", "mcpServers": {"old-server": {"command": "node"}}}`)
+
+	if err := ConfigureAgentMCP(home, "claude-code", execPath); err != nil {
+		t.Fatalf("ConfigureAgentMCP(claude-code) failed: %v", err)
+	}
+
+	data, err := os.ReadFile(claudePath)
+	if err != nil {
+		t.Fatalf("ReadFile(.claude.json) failed: %v", err)
+	}
+
+	var claudeConfig map[string]interface{}
+	if err := json.Unmarshal(data, &claudeConfig); err != nil {
+		t.Fatalf("Failed to parse .claude.json: %v", err)
+	}
+
+	if claudeConfig["other_key"] != "some_value" {
+		t.Fatalf("expected other_key to be preserved, got %v", claudeConfig["other_key"])
+	}
+
+	mcpServers, ok := claudeConfig["mcpServers"].(map[string]interface{})
+	if !ok {
+		t.Fatal("mcpServers is missing or not a map")
+	}
+
+	if _, exists := mcpServers["old-server"]; !exists {
+		t.Fatal("old-server was deleted during merge")
+	}
+
+	bridgeServer, ok := mcpServers["gentle-skills-bridge"].(map[string]interface{})
+	if !ok {
+		t.Fatal("gentle-skills-bridge server is missing from config")
+	}
+
+	if bridgeServer["command"] != execPath {
+		t.Fatalf("expected command %q, got %q", execPath, bridgeServer["command"])
+	}
+
+	// 2. Test OpenCode JSON configuration
+	opencodePath := filepath.Join(home, ".config", "opencode", "opencode.json")
+	if err := ConfigureAgentMCP(home, "opencode", execPath); err != nil {
+		t.Fatalf("ConfigureAgentMCP(opencode) failed: %v", err)
+	}
+
+	data, err = os.ReadFile(opencodePath)
+	if err != nil {
+		t.Fatalf("ReadFile(opencode.json) failed: %v", err)
+	}
+
+	var opencodeConfig map[string]interface{}
+	if err := json.Unmarshal(data, &opencodeConfig); err != nil {
+		t.Fatalf("Failed to parse opencode.json: %v", err)
+	}
+
+	mcpBlock, ok := opencodeConfig["mcp"].(map[string]interface{})
+	if !ok {
+		t.Fatal("mcp block is missing or not a map in opencode.json")
+	}
+
+	bridgeMCP, ok := mcpBlock["gentle-skills-bridge"].(map[string]interface{})
+	if !ok {
+		t.Fatal("gentle-skills-bridge is missing under mcp in opencode.json")
+	}
+
+	if bridgeMCP["type"] != "local" {
+		t.Fatalf("expected type local, got %v", bridgeMCP["type"])
+	}
+
+	// 3. Test Codex TOML configuration
+	codexPath := filepath.Join(home, ".codex", "config.toml")
+	writeTestFile(t, codexPath, "[general]\nkey = \"value\"\n\n[mcp_servers.old]\ncommand = \"node\"\n")
+
+	if err := ConfigureAgentMCP(home, "codex", execPath); err != nil {
+		t.Fatalf("ConfigureAgentMCP(codex) failed: %v", err)
+	}
+
+	tomlData, err := os.ReadFile(codexPath)
+	if err != nil {
+		t.Fatalf("ReadFile(config.toml) failed: %v", err)
+	}
+
+	tomlStr := string(tomlData)
+	if !strings.Contains(tomlStr, "[mcp_servers.gentle-skills-bridge]") {
+		t.Fatal("config.toml is missing the [mcp_servers.gentle-skills-bridge] section")
+	}
+	if !strings.Contains(tomlStr, "[mcp_servers.old]") {
+		t.Fatal("config.toml deleted the pre-existing [mcp_servers.old] section")
+	}
+	expectedCommand := fmt.Sprintf("command = %q", execPath)
+	if !strings.Contains(tomlStr, expectedCommand) {
+		t.Fatalf("config.toml doesn't contain the correct command line %q in:\n%s", expectedCommand, tomlStr)
 	}
 }
