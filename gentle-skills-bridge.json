@@ -1,21 +1,21 @@
 {
-  "version": "1.0.0",
-  "description": "Sincronizador de Skills en tiempo real para Gentle-AI y Engram. Inspirado en el ecosistema de Gentleman Programming.",
-  "homepage": "https://github.com/tu-usuario/gentle-skills-bridge",
-  "license": "MIT",
-  "architecture": {
-    "64bit": {
-      "url": "https://github.com/tu-usuario/gentle-skills-bridge/releases/download/v1.0.0/gentle-skills-bridge-windows-amd64.zip",
-      "hash": "INGRESA_AQUÍ_EL_HASH_SHA256_DEL_ZIP"
-    }
-  },
-  "bin": "gentle-skills-bridge.exe",
-  "checkver": "github",
-  "autoupdate": {
-    "architecture": {
-      "64bit": {
-        "url": "https://github.com/tu-usuario/gentle-skills-bridge/releases/download/v$version/gentle-skills-bridge-windows-amd64.zip"
-      }
-    }
-  }
+    "version":  "1.0.0",
+    "description":  "Sincronizador de Skills en tiempo real para Gentle-AI y Engram. Inspirado en el ecosistema de Gentleman Programming.",
+    "homepage":  "https://github.com/tu-usuario/gentle-skills-bridge",
+    "license":  "MIT",
+    "architecture":  {
+                         "64bit":  {
+                                       "url":  "https://github.com/tu-usuario/gentle-skills-bridge/releases/download/v1.0.0/gentle-skills-bridge-windows-amd64.zip",
+                                       "hash":  "e832f67dffb89a3cfe27a75d3837d128aa2deb0e8f0954440c6710c05656cd57"
+                                   }
+                     },
+    "bin":  "gentle-skills-bridge.exe",
+    "checkver":  "github",
+    "autoupdate":  {
+                       "architecture":  {
+                                            "64bit":  {
+                                                          "url":  "https://github.com/tu-usuario/gentle-skills-bridge/releases/download/v$version/gentle-skills-bridge-windows-amd64.zip"
+                                                      }
+                                        }
+                   }
 }
