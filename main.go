@@ -13,7 +13,7 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-const version = "1.0.8"
+const version = "1.0.9"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -73,7 +73,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "gentle-skills-bridge v%s\n", version)
 		return 0
 	case "bootstrap":
-		cfg, _, err := loadConfig(*configPath, stdout)
+		cfg, _, err := loadConfig(*configPath, stderr)
 		if err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
 			return 1
@@ -84,7 +84,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	case "mcp":
-		cfg, _, err := loadConfig(*configPath, stdout)
+		cfg, _, err := loadConfig(*configPath, stderr)
 		if err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
 			return 1
@@ -95,7 +95,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		return 0
 	case "sync":
-		cfg, _, err := loadConfig(*configPath, stdout)
+		cfg, _, err := loadConfig(*configPath, stderr)
 		if err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
 			return 1
@@ -115,7 +115,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		absClean := filepath.Clean(absPath)
 
-		cfg, activePath, err := loadConfig(*configPath, stdout)
+		cfg, activePath, err := loadConfig(*configPath, stderr)
 		if err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
 			return 1
@@ -165,7 +165,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 1
 		}
 
-		cfg, activePath, err := loadConfig(*configPath, stdout)
+		cfg, activePath, err := loadConfig(*configPath, stderr)
 		if err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la carga de configuración: %v\n", err)
 			return 1
@@ -203,7 +203,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 // loadConfig loads configuration from path, falling back to global config if default path not found.
-func loadConfig(path string, stdout io.Writer) (*bridge.Config, string, error) {
+func loadConfig(path string, stderr io.Writer) (*bridge.Config, string, error) {
 	// If path is custom and doesn't exist, return error
 	if path != "config.json" {
 		if _, err := os.Stat(path); err != nil {
@@ -234,7 +234,7 @@ func loadConfig(path string, stdout io.Writer) (*bridge.Config, string, error) {
 	}
 
 	// 3. Create default global config if it doesn't exist
-	fmt.Fprintf(stdout, "[info] No se encontró config.json local ni global. Creando configuración global por defecto en:\n  -> %s\n\n", globalPath)
+	fmt.Fprintf(stderr, "[info] No se encontró config.json local ni global. Creando configuración global por defecto en:\n  -> %s\n\n", globalPath)
 	if err := os.MkdirAll(globalFolder, 0755); err != nil {
 		return nil, "", fmt.Errorf("no se pudo crear la carpeta global de configuración: %w", err)
 	}
