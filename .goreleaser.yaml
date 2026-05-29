@@ -1,0 +1,54 @@
+# .goreleaser.yaml
+# Configuración de GoReleaser para automatizar compilación, hashing y Scoop.
+
+version: 2
+project_name: gentle-skills-bridge
+
+before:
+  hooks:
+    - go mod tidy
+    - go test -v ./...
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - format: zip
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+scoops:
+  - name: gentle-skills-bridge
+    repository:
+      owner: Cobies
+      name: gentle-skills-bridge
+      branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@carlosbecker.com
+    homepage: "https://github.com/Cobies/gentle-skills-bridge"
+    description: "Sincronizador de Skills en tiempo real para Gentle-AI y Engram. Inspirado en Gentleman Programming."
+    license: MIT
