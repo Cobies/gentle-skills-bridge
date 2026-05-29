@@ -43,7 +43,7 @@ scoops:
   - name: gentle-skills-bridge
     repository:
       owner: Cobies
-      name: gentle-skills-bridge
+      name: scoop-bucket
       branch: main
       token: "{{ .Env.GITHUB_TOKEN }}"
     commit_author:

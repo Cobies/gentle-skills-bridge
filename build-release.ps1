@@ -36,6 +36,7 @@ if (Test-Path $ManifestFile) {
     
     # Actualizamos los campos necesarios
     $ManifestContent.version = $Version
+    $ManifestContent.architecture."64bit".url = "https://github.com/Cobies/gentle-skills-bridge/releases/download/v$Version/gentle-skills-bridge-windows-amd64.zip"
     $ManifestContent.architecture."64bit".hash = $Hash
     
     # Convertimos de vuelta a JSON formateado con indentación

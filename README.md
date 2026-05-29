@@ -86,18 +86,51 @@ go run main.go watch
 
 ---
 
-## Compilación para Producción
+---
 
-Para compilar la herramienta y obtener un ejecutable nativo optimizado:
+## Instalación con Scoop (Recomendada)
+
+Podés instalar la herramienta directamente en Windows utilizando **Scoop** sin necesidad de agregar ningún bucket previo, ejecutando el siguiente comando en tu terminal (PowerShell o CMD):
+
+```bash
+scoop install https://raw.githubusercontent.com/Cobies/gentle-skills-bridge/main/gentle-skills-bridge.json
+```
+
+Scoop descargará el ejecutable compilado, creará un shim automático y lo agregará al `PATH` de tu sistema para que esté disponible globalmente.
+
+### Actualizar la herramienta
+Para actualizar a la versión más reciente en el futuro:
+```bash
+scoop update gentle-skills-bridge
+```
+
+---
+
+## Ejecución desde la Consola
+
+Una vez instalado (ya sea mediante Scoop o compitiendo manualmente), podés abrir cualquier terminal y ejecutar la interfaz interactiva simplemente escribiendo:
+
+```bash
+gentle-skills-bridge
+```
+
+O podés usar comandos directos:
+- **`gentle-skills-bridge sync`**: Sincroniza tus notas una única vez.
+- **`gentle-skills-bridge watch`**: Deja el programa corriendo en segundo plano monitoreando cambios en tiempo real.
+- **`gentle-skills-bridge add [ruta]`**: Agrega un directorio origen de notas.
+
+### Requisitos para el funcionamiento:
+1. **Configuración inicial**: La herramienta buscará un archivo `config.json` local. Si no existe, creará uno global automáticamente en tu directorio de usuario: `~/.gentle-skills-bridge/config.json`.
+2. **Permisos de Administrador (para enlaces simbólicos)**: En Windows, la creación de `symlinks` (enlaces simbólicos) requiere permisos elevados. **Sin embargo, no te preocupes**: si no se ejecuta como Administrador, la herramienta detectará la falta de privilegios y **cambiará automáticamente a modo copia en segundo plano**, sincronizando tus archivos de forma segura.
+
+---
+
+## Compilación Manual (Desarrollo)
+
+Si preferís compilar la herramienta vos mismo:
 
 ```bash
 go build -ldflags="-s -w" -o gentle-skills-bridge.exe main.go
-```
-
-Una vez compilado, podés añadir el ejecutable a tu `PATH` del sistema para ejecutarlo desde cualquier terminal simplemente escribiendo:
-
-```bash
-gentle-skills-bridge watch
 ```
 
 ## Licencia
