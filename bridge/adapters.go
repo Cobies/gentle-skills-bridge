@@ -168,13 +168,19 @@ func ConfigureAgentMCP(home string, agent string, execPath string) error {
 			fmt.Printf("[bootstrap] MCP registrado para Antigravity 2.0 en: %s\n", path3)
 		}
 
+		// 4. Escribir esquemas físicos para que Antigravity CLI cargue las tools correctamente
+		err4 := WriteAntigravityToolSchemas(home)
+
 		if err1 != nil {
 			return err1
 		}
 		if err2 != nil {
 			return err2
 		}
-		return err3
+		if err3 != nil {
+			return err3
+		}
+		return err4
 
 	case "opencode":
 		path := filepath.Join(home, ".config", "opencode", "opencode.json")
@@ -326,4 +332,62 @@ func updateTOMLConfig(filePath string, execPath string) error {
 		content += entry
 		return os.WriteFile(filePath, []byte(content), 0644)
 	}
+}
+
+// WriteAntigravityToolSchemas writes physical tool schema files for Antigravity CLI.
+func WriteAntigravityToolSchemas(home string) error {
+	dir := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	searchSkillsSchema := `{
+  "name": "search_skills",
+  "description": "Search for available development skills by keywords, matches triggers, or descriptions.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "The search query (keyword or phrase)"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  }
+}
+`
+	getSkillSchema := `{
+  "name": "get_skill",
+  "description": "Retrieve the full instruction Markdown file for a specific development skill.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "The exact name/slug of the skill (e.g. 'alphafold-database-fetch-and-analyze')"
+      }
+    },
+    "required": [
+      "name"
+    ]
+  }
+}
+`
+
+	err1 := os.WriteFile(filepath.Join(dir, "search_skills.json"), []byte(searchSkillsSchema), 0644)
+	err2 := os.WriteFile(filepath.Join(dir, "get_skill.json"), []byte(getSkillSchema), 0644)
+
+	if err1 == nil {
+		fmt.Printf("[bootstrap] Esquema search_skills.json creado en: %s\n", filepath.Join(dir, "search_skills.json"))
+	}
+	if err2 == nil {
+		fmt.Printf("[bootstrap] Esquema get_skill.json creado en: %s\n", filepath.Join(dir, "get_skill.json"))
+	}
+
+	if err1 != nil {
+		return err1
+	}
+	return err2
 }

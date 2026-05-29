@@ -210,3 +210,20 @@ func TestConfigureAgentMCP(t *testing.T) {
 		t.Fatalf("config.toml doesn't contain the correct command line %q in:\n%s", expectedCommand, tomlStr)
 	}
 }
+
+func TestWriteAntigravityToolSchemas(t *testing.T) {
+	home := t.TempDir()
+	if err := WriteAntigravityToolSchemas(home); err != nil {
+		t.Fatalf("WriteAntigravityToolSchemas() failed: %v", err)
+	}
+
+	searchSkillsPath := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge", "search_skills.json")
+	if _, err := os.Stat(searchSkillsPath); os.IsNotExist(err) {
+		t.Fatal("search_skills.json schema file was not written")
+	}
+
+	getSkillPath := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge", "get_skill.json")
+	if _, err := os.Stat(getSkillPath); os.IsNotExist(err) {
+		t.Fatal("get_skill.json schema file was not written")
+	}
+}
