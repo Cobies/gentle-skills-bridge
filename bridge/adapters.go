@@ -168,8 +168,15 @@ func ConfigureAgentMCP(home string, agent string, execPath string) error {
 			fmt.Printf("[bootstrap] MCP registrado para Antigravity 2.0 en: %s\n", path3)
 		}
 
-		// 4. Escribir esquemas físicos para que Antigravity CLI cargue las tools correctamente
-		err4 := WriteAntigravityToolSchemas(home)
+		// 4. Antigravity IDE: ~/.gemini/antigravity/mcp_config.json
+		path4 := filepath.Join(home, ".gemini", "antigravity", "mcp_config.json")
+		err4 := updateJSONConfig(path4, []string{"mcpServers", "gentle-skills-bridge"}, value1)
+		if err4 == nil {
+			fmt.Printf("[bootstrap] MCP registrado para Antigravity IDE en: %s\n", path4)
+		}
+
+		// 5. Escribir esquemas físicos para que Antigravity CLI y el IDE carguen las tools correctamente
+		err5 := WriteAntigravityToolSchemas(home)
 
 		if err1 != nil {
 			return err1
@@ -180,7 +187,10 @@ func ConfigureAgentMCP(home string, agent string, execPath string) error {
 		if err3 != nil {
 			return err3
 		}
-		return err4
+		if err4 != nil {
+			return err4
+		}
+		return err5
 
 	case "opencode":
 		path := filepath.Join(home, ".config", "opencode", "opencode.json")
@@ -334,11 +344,11 @@ func updateTOMLConfig(filePath string, execPath string) error {
 	}
 }
 
-// WriteAntigravityToolSchemas writes physical tool schema files for Antigravity CLI.
+// WriteAntigravityToolSchemas writes physical tool schema files for Antigravity CLI and IDE.
 func WriteAntigravityToolSchemas(home string) error {
-	dir := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge")
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+	dirs := []string{
+		filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge"),
+		filepath.Join(home, ".gemini", "antigravity", "mcp", "gentle-skills-bridge"),
 	}
 
 	searchSkillsSchema := `{
@@ -376,18 +386,30 @@ func WriteAntigravityToolSchemas(home string) error {
 }
 `
 
-	err1 := os.WriteFile(filepath.Join(dir, "search_skills.json"), []byte(searchSkillsSchema), 0644)
-	err2 := os.WriteFile(filepath.Join(dir, "get_skill.json"), []byte(getSkillSchema), 0644)
+	var firstErr error
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			fmt.Fprintf(os.Stderr, "[warning] No se pudo crear directorio de esquemas %s: %v\n", dir, err)
+			continue
+		}
 
-	if err1 == nil {
-		fmt.Printf("[bootstrap] Esquema search_skills.json creado en: %s\n", filepath.Join(dir, "search_skills.json"))
-	}
-	if err2 == nil {
-		fmt.Printf("[bootstrap] Esquema get_skill.json creado en: %s\n", filepath.Join(dir, "get_skill.json"))
+		err1 := os.WriteFile(filepath.Join(dir, "search_skills.json"), []byte(searchSkillsSchema), 0644)
+		err2 := os.WriteFile(filepath.Join(dir, "get_skill.json"), []byte(getSkillSchema), 0644)
+
+		if err1 == nil {
+			fmt.Printf("[bootstrap] Esquema search_skills.json creado en: %s\n", filepath.Join(dir, "search_skills.json"))
+		} else if firstErr == nil {
+			firstErr = err1
+		}
+		if err2 == nil {
+			fmt.Printf("[bootstrap] Esquema get_skill.json creado en: %s\n", filepath.Join(dir, "get_skill.json"))
+		} else if firstErr == nil {
+			firstErr = err2
+		}
 	}
 
-	if err1 != nil {
-		return err1
-	}
-	return err2
+	return firstErr
 }

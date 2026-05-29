@@ -209,6 +209,40 @@ func TestConfigureAgentMCP(t *testing.T) {
 	if !strings.Contains(tomlStr, expectedCommand) {
 		t.Fatalf("config.toml doesn't contain the correct command line %q in:\n%s", expectedCommand, tomlStr)
 	}
+
+	// 4. Test Antigravity configuration
+	if err := ConfigureAgentMCP(home, "antigravity", execPath); err != nil {
+		t.Fatalf("ConfigureAgentMCP(antigravity) failed: %v", err)
+	}
+
+	antigravityPaths := []string{
+		filepath.Join(home, ".gemini", "antigravity-cli", "mcp_config.json"),
+		filepath.Join(home, ".gemini", "settings.json"),
+		filepath.Join(home, ".gemini", "config", "mcp_config.json"),
+		filepath.Join(home, ".gemini", "antigravity", "mcp_config.json"),
+	}
+
+	for _, path := range antigravityPaths {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("ReadFile(%s) failed: %v", path, err)
+		}
+		var cfg map[string]interface{}
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			t.Fatalf("Failed to parse config %s: %v", path, err)
+		}
+		mcpServers, ok := cfg["mcpServers"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("mcpServers missing or invalid in %s", path)
+		}
+		bridge, ok := mcpServers["gentle-skills-bridge"].(map[string]interface{})
+		if !ok {
+			t.Fatalf("gentle-skills-bridge server missing from %s", path)
+		}
+		if bridge["command"] != execPath {
+			t.Fatalf("expected command %s, got %s in %s", execPath, bridge["command"], path)
+		}
+	}
 }
 
 func TestWriteAntigravityToolSchemas(t *testing.T) {
@@ -219,11 +253,21 @@ func TestWriteAntigravityToolSchemas(t *testing.T) {
 
 	searchSkillsPath := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge", "search_skills.json")
 	if _, err := os.Stat(searchSkillsPath); os.IsNotExist(err) {
-		t.Fatal("search_skills.json schema file was not written")
+		t.Fatal("search_skills.json schema file was not written to CLI dir")
 	}
 
 	getSkillPath := filepath.Join(home, ".gemini", "antigravity-cli", "mcp", "gentle-skills-bridge", "get_skill.json")
 	if _, err := os.Stat(getSkillPath); os.IsNotExist(err) {
-		t.Fatal("get_skill.json schema file was not written")
+		t.Fatal("get_skill.json schema file was not written to CLI dir")
+	}
+
+	searchSkillsIDEDir := filepath.Join(home, ".gemini", "antigravity", "mcp", "gentle-skills-bridge", "search_skills.json")
+	if _, err := os.Stat(searchSkillsIDEDir); os.IsNotExist(err) {
+		t.Fatal("search_skills.json schema file was not written to IDE dir")
+	}
+
+	getSkillIDEDir := filepath.Join(home, ".gemini", "antigravity", "mcp", "gentle-skills-bridge", "get_skill.json")
+	if _, err := os.Stat(getSkillIDEDir); os.IsNotExist(err) {
+		t.Fatal("get_skill.json schema file was not written to IDE dir")
 	}
 }

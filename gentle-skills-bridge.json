@@ -1,12 +1,12 @@
 {
-    "version":  "1.0.5",
+    "version":  "1.0.6",
     "description":  "Sincronizador de Skills en tiempo real para Gentle-AI y Engram. Inspirado en el ecosistema de Gentleman Programming.",
     "homepage":  "https://github.com/Cobies/gentle-skills-bridge",
     "license":  "MIT",
     "architecture":  {
                          "64bit":  {
-                                       "url":  "https://github.com/Cobies/gentle-skills-bridge/releases/download/v1.0.5/gentle-skills-bridge-windows-amd64.zip",
-                                       "hash": "a1d7ffc6b6909a20796e6ebb3727b64d876f729223fcae8e956c055fb18166f3"
+                                       "url":  "https://github.com/Cobies/gentle-skills-bridge/releases/download/v1.0.6/gentle-skills-bridge-windows-amd64.zip",
+                                       "hash":  "ea4fc9af3a6de8af293ab7a1bf997703207094ca8bc567731a19db15dfc068e4"
                                    }
                      },
     "bin":  "gentle-skills-bridge.exe",

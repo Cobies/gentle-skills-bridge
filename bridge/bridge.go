@@ -531,6 +531,18 @@ Antes de proceder con cualquier tarea o resolver un problema técnico:
 		if absPath, err := filepath.Abs(execPath); err == nil {
 			execPath = absPath
 		}
+		// Si se ejecuta mediante "go run" o en directorio temporal, resolver al binario local compilado o alias de Scoop
+		if strings.Contains(execPath, "go-build") || strings.Contains(strings.ToLower(execPath), "appdata\\local\\temp") {
+			if _, err := os.Stat("gentle-skills-bridge.exe"); err == nil {
+				if absLocal, err := filepath.Abs("gentle-skills-bridge.exe"); err == nil {
+					execPath = absLocal
+				} else {
+					execPath = "gentle-skills-bridge"
+				}
+			} else {
+				execPath = "gentle-skills-bridge"
+			}
+		}
 		agents := GetInstalledAgents(home)
 		for _, agent := range agents {
 			if err := ConfigureAgentMCP(home, agent, execPath); err != nil {
