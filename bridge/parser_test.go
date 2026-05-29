@@ -97,3 +97,27 @@ Content goes here.`
 		t.Errorf("Expected Content to contain generated description, got:\n%s", info.Content)
 	}
 }
+
+func TestParseMarkdown_WithEngramInjection(t *testing.T) {
+	input := `# Engram persistence
+To save data, use the engram commands.`
+
+	info, err := ParseMarkdown("Engram-Guide.md", input)
+	if err != nil {
+		t.Fatalf("ParseMarkdown failed: %v", err)
+	}
+
+	if !strings.Contains(info.Content, "Compatibilidad con Antigravity") {
+		t.Fatal("Expected Content to contain injected Antigravity/Engram compatibility snippet")
+	}
+
+	info2, err := ParseMarkdown("Engram-Guide.md", info.Content)
+	if err != nil {
+		t.Fatalf("ParseMarkdown on already normalized content failed: %v", err)
+	}
+
+	count := strings.Count(info2.Content, "Compatibilidad con Antigravity")
+	if count != 1 {
+		t.Fatalf("Expected only 1 instance of the injected snippet, got %d", count)
+	}
+}

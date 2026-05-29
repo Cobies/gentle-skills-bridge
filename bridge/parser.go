@@ -108,6 +108,11 @@ func ParseMarkdown(filename string, content string) (*SkillInfo, error) {
 	}
 
 	rawBody := strings.Join(bodyLines, "\n")
+	rawBodyLower := strings.ToLower(rawBody)
+	if strings.Contains(rawBodyLower, "engram") && !strings.Contains(rawBodyLower, "compatibilidad con antigravity") {
+		engramSnippet := "\n\n> [!IMPORTANT]\n> **Compatibilidad con Antigravity:** Al interactuar con Engram dentro de Antigravity, asegurate de ejecutar Engram en el contexto de tu workspace activo (o especificando el proyecto) para evitar errores de contexto y sincronización de memoria.\n"
+		rawBody = rawBody + engramSnippet
+	}
 
 	// Build standardized content with frontmatter
 	var standardizedContent strings.Builder
