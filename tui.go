@@ -62,7 +62,6 @@ func getChoices(cfg *bridge.Config) []string {
 		syncStatus = "[ACTIVO]"
 	}
 	return []string{
-		"Sincronizar skills ahora",
 		"Instalar ruteador MCP en agentes (Bootstrap)",
 		"Agregar carpeta origen de skills",
 		"Quitar carpeta origen de skills",
@@ -117,27 +116,24 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor--
 				}
 			case "down", "j":
-				if m.cursor < len(m.choices)-1 { // 6 choices, max index 5
+				if m.cursor < len(m.choices)-1 { // Dynamic based on options length
 					m.cursor++
 				}
 			case "enter":
 				switch m.cursor {
-				case 0: // Sync
-					m.selected = "sync"
-					return m, tea.Quit
-				case 1: // Bootstrap MCP Router
+				case 0: // Bootstrap MCP Router
 					m.selected = "bootstrap"
 					return m, tea.Quit
-				case 2: // Add Source
+				case 1: // Add Source
 					m.state = "add"
 					m.textInput.Reset()
 					m.textInput.Focus()
 					m.errMessage = ""
-				case 3: // Remove Source
+				case 2: // Remove Source
 					m.state = "remove"
 					m.removeCursor = 0
 					m.errMessage = ""
-				case 4: // Toggle sync_to_engram
+				case 3: // Toggle sync_to_engram
 					m.cfg.SyncToEngram = !m.cfg.SyncToEngram
 					if err := saveConfig(m.activePath, m.cfg); err != nil {
 						m.errMessage = fmt.Sprintf("Error al guardar config: %v", err)
@@ -150,9 +146,9 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.infoMessage = fmt.Sprintf("Sincronización con Engram %s", status)
 					m.choices = getChoices(m.cfg)
 					m.state = "success"
-				case 5: // Version
+				case 4: // Version
 					m.state = "version"
-				case 6: // Exit
+				case 5: // Exit
 					m.selected = "exit"
 					return m, tea.Quit
 				}
@@ -426,9 +422,6 @@ func runInteractiveMenu(stdout, stderr io.Writer, configPath string, dryRun bool
 	finalModel := m.(tuiModel)
 
 	switch finalModel.selected {
-	case "sync":
-		cfg.DryRun = dryRun
-		return runSync(cfg, stdout, stderr)
 	case "bootstrap":
 		if err := bridge.BootstrapRouter(cfg); err != nil {
 			fmt.Fprintf(stderr, "[error] Falló la inyección del ruteador: %v\n", err)
