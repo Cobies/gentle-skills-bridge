@@ -457,3 +457,71 @@ func fileContentIdentical(content, path string) bool {
 	}
 	return string(existingBytes) == content
 }
+
+// BootstrapRouter deploys the mcp-skills-router.md as a skill to all target directories.
+func BootstrapRouter(cfg *Config) error {
+	targets := cfg.Targets
+	if cfg.AutoDiscoverAgents {
+		discovered, err := DiscoverTargets()
+		if err != nil {
+			fmt.Printf("[warning] Failed to discover agents: %v\n", err)
+		} else {
+			// Merge discovered targets, avoiding duplicates
+			seen := make(map[string]bool)
+			for _, t := range targets {
+				seen[filepath.Clean(t)] = true
+			}
+			for _, t := range discovered {
+				cleanT := filepath.Clean(t)
+				if !seen[cleanT] {
+					seen[cleanT] = true
+					targets = append(targets, t)
+				}
+			}
+		}
+	}
+
+	if len(targets) == 0 {
+		return fmt.Errorf("no target directories configured or discovered")
+	}
+
+	routerSkillContent := `---
+name: mcp-skills-router
+description: "Trigger: cuando requieras guías de codificación, mejores prácticas, patrones de diseño o resolver cualquier tarea de desarrollo."
+---
+
+# MCP Skills Router
+
+Antes de proceder con cualquier tarea o resolver un problema técnico:
+1. Verificá si existe alguna skill específica en tus instrucciones.
+2. Si no encontrás una skill local adecuada, llamá de forma OBLIGATORIA a la herramienta del MCP ` + "`search_skills`" + ` pasándole palabras clave relacionadas con la tarea (por ejemplo: "alphafold", "pubmed", "testing", "diseño").
+3. Si encontrás una skill relevante en la búsqueda, cargá sus instrucciones y seguilas al pie de la letra.
+`
+
+	successCount := 0
+	for _, targetDir := range targets {
+		routerFolder := filepath.Join(targetDir, "mcp-skills-router")
+		targetFile := filepath.Join(routerFolder, "SKILL.md")
+
+		if err := os.MkdirAll(routerFolder, 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "[error] Falló la creación de carpeta %s: %v\n", routerFolder, err)
+			continue
+		}
+
+		if err := os.WriteFile(targetFile, []byte(routerSkillContent), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "[error] Falló la escritura en %s: %v\n", targetFile, err)
+			continue
+		}
+
+		fmt.Printf("[bootstrap] Ruteador de MCP instalado con éxito en: %s\n", targetFile)
+		successCount++
+	}
+
+	if successCount == 0 {
+		return fmt.Errorf("no se pudo instalar el ruteador de MCP en ningún agente")
+	}
+
+	// Trigger registry refresh
+	triggerGentleRegistryRefresh()
+	return nil
+}

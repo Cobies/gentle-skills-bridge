@@ -322,3 +322,20 @@ func assertContains(t *testing.T, value string, expected string) {
 		t.Fatalf("expected %q to contain %q", value, expected)
 	}
 }
+
+func TestBootstrapRouter(t *testing.T) {
+	targetDir := t.TempDir()
+
+	cfg := &Config{
+		Targets: []string{targetDir},
+	}
+
+	err := BootstrapRouter(cfg)
+	if err != nil {
+		t.Fatalf("BootstrapRouter() error = %v", err)
+	}
+
+	content := readTestFile(t, filepath.Join(targetDir, "mcp-skills-router", "SKILL.md"))
+	assertContains(t, content, "name: mcp-skills-router")
+	assertContains(t, content, "search_skills")
+}
