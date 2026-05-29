@@ -13,7 +13,7 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-const version = "1.0.2"
+const version = "1.0.3"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))

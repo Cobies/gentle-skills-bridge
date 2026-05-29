@@ -161,10 +161,20 @@ func ConfigureAgentMCP(home string, agent string, execPath string) error {
 			fmt.Printf("[bootstrap] MCP registrado para Gemini CLI (Legacy) en: %s\n", path2)
 		}
 
+		// 3. Antigravity 2.0: ~/.gemini/config/mcp_config.json
+		path3 := filepath.Join(home, ".gemini", "config", "mcp_config.json")
+		err3 := updateJSONConfig(path3, []string{"mcpServers", "gentle-skills-bridge"}, value1)
+		if err3 == nil {
+			fmt.Printf("[bootstrap] MCP registrado para Antigravity 2.0 en: %s\n", path3)
+		}
+
 		if err1 != nil {
 			return err1
 		}
-		return err2
+		if err2 != nil {
+			return err2
+		}
+		return err3
 
 	case "opencode":
 		path := filepath.Join(home, ".config", "opencode", "opencode.json")
